@@ -2,6 +2,7 @@ package parser;
 
 import parser.types.Vertex;
 
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
@@ -29,7 +30,8 @@ public class Parser {
     }
 
     private void parseSectors() {
-        
+        Lump sectors = lumps.get("SECTORS");
+        System.out.println(sectors);
     }
 
     private void parseVertices() {
@@ -57,7 +59,7 @@ public class Parser {
     private void parseHeader(byte[] header) {
         String id = readStringFromBytes(header, 0, 4);
         if(!id.equals("IWAD")) {
-            System.err.println("File format is not correct or unsupported. PWAD files are not supported.");
+            System.err.println("File format is not correct or unsupported.");
             System.exit(1);
         }
         numLumps = readIntFromBytes(header, 4, 4);
@@ -69,7 +71,15 @@ public class Parser {
         System.arraycopy(in, offset, out, 0, length);
         ByteBuffer buffer = ByteBuffer.wrap(out);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
-        return buffer.getInt();
+        int output = 0;
+        try {
+            output = buffer.getInt();
+        } catch (BufferUnderflowException e) {
+            e.printStackTrace();
+            System.out.println(Arrays.toString(out));
+            System.exit(1);
+        }
+        return output;
     }
 
     private String readStringFromBytes(byte[] in, int offset, int length) {
