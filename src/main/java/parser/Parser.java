@@ -71,15 +71,7 @@ public class Parser {
         System.arraycopy(in, offset, out, 0, length);
         ByteBuffer buffer = ByteBuffer.wrap(out);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
-        int output = 0;
-        try {
-            output = buffer.getInt();
-        } catch (BufferUnderflowException e) {
-            e.printStackTrace();
-            System.out.println(Arrays.toString(out));
-            System.exit(1);
-        }
-        return output;
+        return length == 4 ? buffer.getInt() : buffer.getShort();
     }
 
     private String readStringFromBytes(byte[] in, int offset, int length) {
