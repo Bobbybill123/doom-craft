@@ -1,5 +1,8 @@
 package parser;
 
+import parser.types.LineDef;
+import parser.types.Sector;
+import parser.types.SideDef;
 import parser.types.Vertex;
 
 import java.nio.BufferUnderflowException;
@@ -15,6 +18,9 @@ public class Parser {
     private int directoryLocation;
     private Map<String, Lump> lumps;
     private List<Vertex> vertices;
+    private Map<Integer, Sector> sectors;
+    private List<SideDef> sideDefs;
+    private List<LineDef> lineDefs;
     public Parser(byte[] contents) {
         this.contents = contents;
         byte[] header = new byte[HEADER_LENGTH];
@@ -27,21 +33,72 @@ public class Parser {
 
     private void parseLumps() {
         parseVertices();
+        parseSectors();
+        parseSideDefs();
+        parseLineDefs();
+    }
+
+    private void parseLineDefs() {
+        Lump linedefLump = lumps.get("LINEDEFS");
+        lineDefs = new ArrayList<>();
+        for (int i = 0; i < linedefLump.getSize(); i+=14) {
+            int curr = linedefLump.getPos() + i;
+            int startVertex = readIntFromBytes(contents, curr, 2);
+            int endVertex = readIntFromBytes(contents, curr+=2, 2);
+            byte[] flags = new byte[2];
+            System.arraycopy(contents, curr+=2, flags, 0, 2);
+            int type = readIntFromBytes(contents, curr+=2, 2);
+            int sectorTag = readIntFromBytes(contents, curr+=2, 2);
+            int frontSidedef = readIntFromBytes(contents, curr+=2, 2);
+            int endSidedef = readIntFromBytes(contents, curr, 2);
+            Vertex start = vertices.get(startVertex);
+            Vertex end = vertices.get(endVertex);
+            Sector sector = sectors.get(sectorTag);
+            SideDef front = sideDefs.get(frontSidedef);
+            SideDef back = sideDefs.get(endSidedef);
+            lineDefs.add(new LineDef(start, end, flags, type, sector, front, back));
+        }
+    }
+
+    private void parseSideDefs() {
+        Lump sidedefLump = lumps.get("SIDEDEFS");
+        sideDefs = new ArrayList<>();
+        for (int i = 0; i < sidedefLump.getSize(); i+=30) {
+            int curr = sidedefLump.getPos() + i;
+            int xOffset = readIntFromBytes(contents, curr, 2);
+            int yOffset = readIntFromBytes(contents, curr+=2, 2);
+            String upperName = readStringFromBytes(contents, curr+=8, 8);
+            String lowerName = readStringFromBytes(contents, curr+=8, 8);
+            String midName = readStringFromBytes(contents, curr+=8, 8);
+            int sectorNum = readIntFromBytes(contents, curr, 2);
+            sideDefs.add(new SideDef(xOffset, yOffset, upperName, lowerName, midName, sectors.get(sectorNum)));
+        }
     }
 
     private void parseSectors() {
-        Lump sectors = lumps.get("SECTORS");
-        System.out.println(sectors);
+        Lump sectorLump = lumps.get("SECTORS");
+        sectors = new HashMap<>();
+        for (int i = 0; i < sectorLump.getSize(); i+=26) {
+            int curr = sectorLump.getPos() + i;
+            int floorHeight = readIntFromBytes(contents, curr, 2);
+            int ceilHeight = readIntFromBytes(contents, curr+=2, 2);
+            String floorTexName = readStringFromBytes(contents, curr+=8, 8);
+            String ceilTexName = readStringFromBytes(contents, curr+=8, 8);
+            int lightLevel = readIntFromBytes(contents, curr+=2, 2);
+            int specialType = readIntFromBytes(contents, curr+=2, 2);
+            int tagNum = readIntFromBytes(contents, curr, 2);
+            sectors.put(tagNum, new Sector(floorHeight, ceilHeight, floorTexName, ceilTexName, lightLevel, specialType, tagNum));
+        }
     }
 
     private void parseVertices() {
-        Lump vertices = lumps.get("VERTEXES");
-        this.vertices = new ArrayList<>();
-        for (int i = 0; i < vertices.getSize(); i+=4) {
-            int curr = vertices.getPos() + i;
+        Lump vertexLump = lumps.get("VERTEXES");
+        vertices = new ArrayList<>();
+        for (int i = 0; i < vertexLump.getSize(); i+=4) {
+            int curr = vertexLump.getPos() + i;
             int x = readIntFromBytes(contents, curr, 2);
             int y = readIntFromBytes(contents, curr + 2, 2);
-            this.vertices.add(new Vertex(x, y));
+            vertices.add(new Vertex(x, y));
         }
     }
 

@@ -11,4 +11,5 @@ public class SideDef {
     private String upperName;
     private String lowerName;
     private String middleName;
+    private Sector sectorFacing;
 }
